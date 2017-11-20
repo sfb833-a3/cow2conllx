@@ -16,13 +16,15 @@ use xml::reader;
 use xml::reader::{EventReader, XmlEvent};
 
 struct SentenceIter<R>
-    where R: Read
+where
+    R: Read,
 {
     reader: EventReader<R>,
 }
 
 impl<R> SentenceIter<R>
-    where R: Read
+where
+    R: Read,
 {
     fn new(reader: EventReader<R>) -> Self {
         SentenceIter { reader: reader }
@@ -30,7 +32,8 @@ impl<R> SentenceIter<R>
 }
 
 impl<R> Iterator for SentenceIter<R>
-    where R: Read
+where
+    R: Read,
 {
     type Item = reader::Result<Sentence>;
 
@@ -62,9 +65,11 @@ impl<R> Iterator for SentenceIter<R>
                     for token in s.trim().split("\n") {
                         // XXX: throw error when there is no field at all?
                         if let Some(form) = token.split("\t").nth(0) {
-                            tokens.push(TokenBuilder::new(form)
-                                .features(Features::from_string(features.clone()))
-                                .token());
+                            tokens.push(
+                                TokenBuilder::new(form)
+                                    .features(Features::from_string(features.clone()))
+                                    .token(),
+                            );
                         }
                     }
                 }
@@ -76,7 +81,8 @@ impl<R> Iterator for SentenceIter<R>
 }
 
 fn find_attribute_or(attrs: &[OwnedAttribute], name: &str, default: &str) -> String {
-    attrs.iter()
+    attrs
+        .iter()
         .find(|a| a.name.local_name == name)
         .map(|a| a.value.clone())
         .unwrap_or(default.to_owned())
