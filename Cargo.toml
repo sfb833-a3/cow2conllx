@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Daniël de Kok <me@danieldk.eu>"]
 
 [dependencies]
-conllx = "0.3"
+conllx = "0.9"
 getopts = "0.2"
-stdinout = "0.1"
-xml-rs = "0.3"
+stdinout = "0.4"
+xml-rs = "0.7"

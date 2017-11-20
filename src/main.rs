@@ -8,7 +8,7 @@ use std::fmt::Display;
 use std::io::{BufReader, BufWriter, Read};
 use std::process;
 
-use conllx::{Sentence, TokenBuilder, WriteSentence};
+use conllx::{Features, Sentence, TokenBuilder, WriteSentence};
 use getopts::Options;
 use stdinout::*;
 use xml::attribute::OwnedAttribute;
@@ -62,9 +62,8 @@ impl<R> Iterator for SentenceIter<R>
                     for token in s.trim().split("\n") {
                         // XXX: throw error when there is no field at all?
                         if let Some(form) = token.split("\t").nth(0) {
-                            tokens.push(TokenBuilder::new()
-                                .form(form)
-                                .features(features.clone())
+                            tokens.push(TokenBuilder::new(form)
+                                .features(Features::from_string(features.clone()))
                                 .token());
                         }
                     }
