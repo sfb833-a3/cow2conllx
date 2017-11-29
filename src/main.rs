@@ -4,13 +4,12 @@ extern crate stdinout;
 extern crate xml;
 
 use std::env::args;
-use std::fmt::Display;
 use std::io::{BufReader, BufWriter, Read};
 use std::process;
 
 use conllx::{Features, Sentence, TokenBuilder, WriteSentence};
 use getopts::Options;
-use stdinout::*;
+use stdinout::{Input, OrExit, Output};
 use xml::attribute::OwnedAttribute;
 use xml::reader;
 use xml::reader::{EventReader, XmlEvent};
@@ -49,18 +48,16 @@ where
             };
 
             match event {
-                XmlEvent::StartElement { name, attributes, .. } => {
-                    if name.local_name == "s" {
-                        let bdc = find_attribute_or(&attributes, "bdc", "f");
-                        let bpc = find_attribute_or(&attributes, "bpc", "f");
-                        features = format!("bdc:{}|bpc:{}", bdc, bpc);
-                    }
-                }
-                XmlEvent::EndElement { name } => {
-                    if name.local_name == "s" {
-                        return Some(Ok(Sentence::new(tokens)));
-                    }
-                }
+                XmlEvent::StartElement {
+                    name, attributes, ..
+                } => if name.local_name == "s" {
+                    let bdc = find_attribute_or(&attributes, "bdc", "f");
+                    let bpc = find_attribute_or(&attributes, "bpc", "f");
+                    features = format!("bdc:{}|bpc:{}", bdc, bpc);
+                },
+                XmlEvent::EndElement { name } => if name.local_name == "s" {
+                    return Some(Ok(Sentence::new(tokens)));
+                },
                 XmlEvent::Characters(s) => {
                     for token in s.trim().split("\n") {
                         // XXX: throw error when there is no field at all?
@@ -88,13 +85,6 @@ fn find_attribute_or(attrs: &[OwnedAttribute], name: &str, default: &str) -> Str
         .unwrap_or(default.to_owned())
 }
 
-pub fn or_exit<T, E: Display>(r: Result<T, E>) -> T {
-    r.unwrap_or_else(|e: E| -> T {
-        println!("Error: {}", e);
-        process::exit(1)
-    })
-}
-
 fn print_usage(program: &str, opts: Options) {
     let brief = format!("Usage: {} [options] [INPUT_FILE] [OUTPUT_FILE]", program);
     print!("{}", opts.usage(&brief));
@@ -106,7 +96,8 @@ fn main() {
 
     let mut opts = Options::new();
     opts.optflag("h", "help", "print this help menu");
-    let matches = or_exit(opts.parse(&args[1..]));
+    let matches = opts.parse(&args[1..])
+        .or_exit("Could not parse arguments", 1);
 
     if matches.opt_present("h") {
         print_usage(&program, opts);
@@ -119,13 +110,17 @@ fn main() {
     }
 
     let input = Input::from(matches.free.get(0).map(String::as_str));
-    let reader = BufReader::new(or_exit(input.buf_read()));
+    let reader = BufReader::new(input.buf_read().or_exit("Cannot open input for reading", 1));
 
     let output = Output::from(matches.free.get(1).map(String::as_str));
-    let mut writer = conllx::Writer::new(BufWriter::new(or_exit(output.write())));
+    let mut writer = conllx::Writer::new(BufWriter::new(
+        output.write().or_exit("Cannot open output for writing", 1),
+    ));
 
     for sentence in SentenceIter::new(EventReader::new(reader)) {
-        let sentence = or_exit(sentence);
-        or_exit(writer.write_sentence(&sentence));
+        let sentence = sentence.or_exit("Error reading sentence", 1);
+        writer
+            .write_sentence(&sentence)
+            .or_exit("Error writing sentence", 1);
     }
 }
